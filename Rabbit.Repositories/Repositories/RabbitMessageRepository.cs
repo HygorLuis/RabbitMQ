@@ -8,31 +8,56 @@ namespace Rabbit.Repositories.Repositories
 {
     public class RabbitMessageRepository : IRabbitMessageRepository
     {
+        private IConnection _rabbitMQConnection;
+        private IModel _rabbitMQChannel;
+        private const string fila = "queue";
+
         public void SendMessage(Message message)
         {
-            var name = "queue";
 
-            var factory = new ConnectionFactory { HostName = "localhost", Port = 5672, UserName = "admin", Password = "admin", VirtualHost = "Teste" };
-            using (IConnection connection = factory.CreateConnection())
+            if (_rabbitMQConnection?.IsOpen != true)
             {
-                using (IModel channel = connection.CreateModel())
-                {
-                    channel.QueueDeclare(queue: name,
-                                       durable: true,
-                                     exclusive: false,
-                                    autoDelete: false,
-                                     arguments: null);
-
-                    string json = JsonSerializer.Serialize(message);
-                    byte[] body = Encoding.UTF8.GetBytes(json);
-
-                    channel.BasicPublish(exchange: "",
-                                       routingKey: name,
-                                  basicProperties: null,
-                                             body: body);
-
-                }
+                CreateConnection();
+                CreateQueue();
             }
+
+            string json = JsonSerializer.Serialize(message);
+            byte[] body = Encoding.UTF8.GetBytes(json);
+
+            _rabbitMQChannel.BasicPublish(exchange: "",
+                               routingKey: fila,
+                          basicProperties: null,
+                                     body: body);
+
         }
+
+        #region Private
+
+        public void CreateConnection()
+        {
+            var factory = new ConnectionFactory()
+            {
+                HostName = "localhost",
+                Port = 5672,
+                UserName = "admin",
+                Password = "admin",
+                VirtualHost = "Teste"
+            };
+
+            _rabbitMQConnection = factory.CreateConnection();
+        }
+
+        public void CreateQueue()
+        {
+            _rabbitMQChannel = _rabbitMQConnection.CreateModel();
+
+            _rabbitMQChannel.QueueDeclare(queue: fila,
+                                        durable: true,
+                                      exclusive: false,
+                                     autoDelete: false,
+                                      arguments: null);
+        }
+
+        #endregion
     }
 }
