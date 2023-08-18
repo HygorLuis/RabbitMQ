@@ -24,9 +24,12 @@ namespace Rabbit.Repositories.Repositories
             string json = JsonSerializer.Serialize(message);
             byte[] body = Encoding.UTF8.GetBytes(json);
 
+            var properties = _rabbitMQChannel.CreateBasicProperties();
+            properties.DeliveryMode = 2;
+
             _rabbitMQChannel.BasicPublish(exchange: "",
                                routingKey: fila,
-                          basicProperties: null,
+                          basicProperties: properties,
                                      body: body);
 
         }
